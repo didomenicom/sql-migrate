@@ -37,6 +37,9 @@ func realMain() int {
 			"skip": func() (cli.Command, error) {
 				return &SkipCommand{}, nil
 			},
+			"list-sql-drivers": func() (cli.Command, error) {
+				return &ListSqlDriversCommand{}, nil
+			},
 		},
 		HelpFunc:    cli.BasicHelpFunc("sql-migrate"),
 		HelpWriter:  os.Stdout,

@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 
 	"github.com/go-gorp/gorp/v3"
+	"github.com/snowflakedb/gosnowflake"
 	"gopkg.in/yaml.v2"
 
 	migrate "github.com/rubenv/sql-migrate"
@@ -19,9 +20,10 @@ import (
 )
 
 var dialects = map[string]gorp.Dialect{
-	"sqlite3":  gorp.SqliteDialect{},
-	"postgres": gorp.PostgresDialect{},
-	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
+	"mysql":     gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
+	"postgres":  gorp.PostgresDialect{},
+	"snowflake": gorp.SnowflakeDialect{},
+	"sqlite3":   gorp.SqliteDialect{},
 }
 
 var (
@@ -96,15 +98,20 @@ func GetEnvironment() (*Environment, error) {
 }
 
 func GetConnection(env *Environment) (*sql.DB, string, error) {
-	db, err := sql.Open(env.Dialect, env.DataSource)
-	if err != nil {
-		return nil, "", fmt.Errorf("Cannot connect to database: %w", err)
-	}
-
 	// Make sure we only accept dialects that were compiled in.
 	_, exists := dialects[env.Dialect]
 	if !exists {
 		return nil, "", fmt.Errorf("Unsupported dialect: %s", env.Dialect)
+	}
+
+	if env.Dialect == "snowflake" {
+		// This registers the driver. sql.Register() is not needed
+		gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{})
+	}
+
+	db, err := sql.Open(env.Dialect, env.DataSource)
+	if err != nil {
+		return nil, "", fmt.Errorf("Cannot connect to database: %w", err)
 	}
 
 	return db, env.Dialect, nil
